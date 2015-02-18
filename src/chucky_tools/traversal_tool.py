@@ -44,6 +44,8 @@ class TraversalTool(BatchTool, ChuckyJoern, ChuckyLogger):
         query = QUERY.format(start_nodes, self.traversal)
         result = self.run_query(query)
         for line, nodes in zip(batch, result):
+            if not nodes:
+                continue
             if self.args.echo:
                 self.write_fields(line + nodes)
             else:
