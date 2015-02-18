@@ -7,7 +7,7 @@ from chucky_tools.base import GroupedBatchTool
 ARGPARSE_BATCH_SIZE = None
 ARGPARSE_DESCRIPTION = """Statement tainter."""
 
-STEPS_DIR = path.join(path.dirname(path.dirname(__file__)), 'joernsteps')
+STEPS_DIR = path.join(path.dirname(__file__), 'data', 'steps')
 
 TAINT_FORWARD_QUERY = 'idListToNodes({}).transform{{ it.taintForward("{}", {}).id.toList(); }}'
 TAINT_BACKWARD_QUERY = 'idListToNodes({}).transform{{ it.taintBackward("{}", {}).id.toList(); }}'

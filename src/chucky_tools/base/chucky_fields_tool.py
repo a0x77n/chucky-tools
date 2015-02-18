@@ -29,3 +29,7 @@ class FieldsTool(PipeTool):
     def write_fields(self, fields):
         self.output(self.args.delimiter.join(map(str, fields)))
         self.output(os.linesep)
+
+    @classmethod
+    def main(cls):
+        cls().run()
