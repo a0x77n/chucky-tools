@@ -66,6 +66,8 @@ class TaintTool(GroupedBatchTool, ChuckyJoern):
         query = self._query.format(statement_ids, identifier, self.args.max_hops)
         results = self.run_query(query)
         for line, result in zip(group_data, results):
+            if not result:
+                continue
             if self.args.echo:
                 self.write_fields(line + result)
             else:
