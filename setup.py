@@ -7,7 +7,7 @@ setup(
     description="Tools for chucky.",
     license="GPLv3",
     url="http://github.com/a0x77n/chucky-tools/",
-    install_requires=['joerntools >= 0.1-chucky'],
+    install_requires=['joerntools >= 0.1-chucky', 'numpy'],
     packages=find_packages("src"),
     package_dir={"": "src"},
     package_data={"chucky_tools": ['data/steps/*.groovy', 'data/steps/normalization/*.groovy', 'data/steps/normalization/handler/*.groovy']},
