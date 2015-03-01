@@ -5,7 +5,7 @@ setup(
     version="0.1dev",
     author="Alwin Maier",
     description="Tools for chucky.",
-    licence="GPLv3",
+    license="GPLv3",
     url="http://github.com/a0x77n/chucky-tools/",
     install_requires=['joerntools >= 0.1-chucky'],
     packages=find_packages("src"),
