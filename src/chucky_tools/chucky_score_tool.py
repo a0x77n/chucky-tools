@@ -1,3 +1,5 @@
+import numpy as np
+
 from joerntools.mlutils.EmbeddingLoader import EmbeddingLoader
 
 from chucky_tools.base import ChuckyLogger
@@ -19,6 +21,12 @@ class ChuckyScoreTool(FieldsTool, ChuckyLogger):
             type=str,
             help='the directory containing the embedding'
         )
+        self.argParser.add_argument(
+            '--ignore-missing-datapoints',
+            action='store_true',
+            default=False,
+            help="""Treat missing datapoints as zero vectors"""
+        )
 
     def streamStart(self):
         try:
@@ -32,26 +40,40 @@ class ChuckyScoreTool(FieldsTool, ChuckyLogger):
 
     def process_fields(self, fields):
         node = fields[0]
+        neighbors = fields[1:]
+
         if len(fields) < 2:
-            self.output('{}\t'.format(str(node)))
-            self.output('     n/a\t')
-            self.output('n/a')
-            self.output('\n')
+            self.write_fields([node, '     n/a', 'n/a'])
             return
 
-        neighbors = fields[1:]
-        node_index = self._emb.rTOC[node]
-        neighbor_index = map(lambda x: self._emb.rTOC[x], neighbors)
-        data_point = self._emb.x[node_index]
-        mean = self._emb.x[neighbor_index].mean(axis=0).getA()
-        deviation = (mean - data_point)
+        node_index = self._get_index(node)
+        neighbor_indices = map(self._get_index, neighbors)
+        nonzero_neighbor_indices = [n for n in neighbor_indices if n is not None]
+        if len(nonzero_neighbor_indices) > 0:
+            mean = (self._emb.x[nonzero_neighbor_indices].sum(axis=0) / len(neighbors))
+        else:
+            mean = np.zeros((1, self._emb.x.shape[1]))
+        if node_index is not None:
+            datapoint = self._emb.x[[node_index]]
+        else:
+            datapoint = np.zeros((1, self._emb.x.shape[1]))
+        deviation = mean - datapoint
         index = deviation.argmax()
         score = deviation[0, index]
+        feat = self._index_to_feature(index)
+        self.write_fields([node, '{:< 6.5f}'.format(score), feat])
+
+    def _get_index(self, node_id):
         try:
-            feat = self._emb.rFeatTable[index].replace('%20', ' ')
+            return self._emb.rTOC[node_id]
         except KeyError:
-            feat = None
-        self.output('{}\t'.format(str(node)))
-        self.output('{:< 6.5f}\t'.format(score))
-        self.output(str(feat))
-        self.output('\n')
+            if self.args.ignore_missing_datapoints:
+                return None
+            raise
+
+    def _index_to_feature(self, index):
+        try:
+            return self._emb.rFeatTable[index].replace("%20", " ")
+        except KeyError:
+            return None
+
