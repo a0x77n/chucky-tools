@@ -12,11 +12,25 @@ class ChuckyJoern(CmdLineTool):
         self._joern = None
         self.__is_initialized = False
 
-    def _init_joern_interface(self, step_dir=None):
+    def _initializeOptParser(self):
+        super(ChuckyJoern, self)._initializeOptParser()
+        self.argParser.add_argument(
+            '--steps',
+            type=str,
+            nargs='+',
+            default=[],
+            help='additional directorys containing joern steps'
+        )
+
+    def _init_joern_interface(self):
         self._joern = JoernSteps()
-        if step_dir:
-            self._joern.addStepsDir(step_dir)
         self._joern.connectToDatabase()
+
+        self._joern.stepsDirs = []
+        for directory in self.args.steps:
+            self._joern.addStepsDir(directory)
+        self._joern.sendInitCommand()
+
         self.__is_initialized = True
 
     def run_query(self, query):
