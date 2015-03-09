@@ -1,13 +1,9 @@
-import os.path as path
-
 from chucky_tools.base import ChuckyJoern
 from chucky_tools.base import GroupedBatchTool
 
 
 ARGPARSE_BATCH_SIZE = None
 ARGPARSE_DESCRIPTION = """Statement tainter."""
-
-STEPS_DIR = path.join(path.dirname(__file__), 'data', 'steps')
 
 TAINT_FORWARD_QUERY = 'idListToNodes({}).transform{{ it.taintForward("{}", {}).id.toList(); }}'
 TAINT_BACKWARD_QUERY = 'idListToNodes({}).transform{{ it.taintBackward("{}", {}).id.toList(); }}'
@@ -52,7 +48,6 @@ class TaintTool(GroupedBatchTool, ChuckyJoern):
 
     def streamStart(self):
         super(TaintTool, self).streamStart()
-        self._init_joern_interface(STEPS_DIR)
         if self.args.mode == 'forward':
             self._query = TAINT_FORWARD_QUERY
         else:

@@ -35,7 +35,6 @@ class TranslateTool(BatchTool, ChuckyJoern):
 
     def streamStart(self):
         super(TranslateTool, self).streamStart()
-        self._init_joern_interface()
         if self.args.type == 'node':
             self._query = 'idListToNodes({}).{}'
         else:
