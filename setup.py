@@ -21,6 +21,7 @@ setup(
             'chucky-demux = chucky_tools.demux_tool:DemuxTool.main',
             'chucky-mux = chucky_tools.mux_tool:MuxTool.main',
             'chucky-taint = chucky_tools.taint_tool:TaintTool.main',
+            'chucky-slice = chucky_tools.slice_tool:SliceTool.main',
             'chucky-store = chucky_tools.store_tool:StoreTool.main',
             'chucky-traverse = chucky_tools.traversal_tool:TraversalTool.main',
             'chucky-translate = chucky_tools.translate_tool:TranslateTool.main',
