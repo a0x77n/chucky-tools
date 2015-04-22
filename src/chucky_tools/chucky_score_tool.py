@@ -1,79 +1,88 @@
 import numpy as np
+import gzip
 
-from joerntools.mlutils.EmbeddingLoader import EmbeddingLoader
-
-from chucky_tools.base import ChuckyLogger
+from chucky_tools.base import ChuckyEmbeddingLoader
 from chucky_tools.base import FieldsTool
 
 
 ARGPARSE_DESCRIPTION = """Chucky anomaly ranker."""
 
 
-class ChuckyScoreTool(FieldsTool, ChuckyLogger):
+class ChuckyScoreTool(FieldsTool, ChuckyEmbeddingLoader):
     def __init__(self):
         super(ChuckyScoreTool, self).__init__(ARGPARSE_DESCRIPTION)
-        self._emb = None
+        self._feats = None
 
     def _initializeOptParser(self):
         super(ChuckyScoreTool, self)._initializeOptParser()
-        self.argParser.add_argument(
-            'embedding',
-            type=str,
-            help='the directory containing the embedding'
-        )
         self.argParser.add_argument(
             '--ignore-missing-datapoints',
             action='store_true',
             default=False,
             help="""Treat missing datapoints as zero vectors"""
         )
+        self.argParser.add_argument(
+            '--feats',
+            type=str,
+            default=None,
+            help="load feature table"
+        )
 
     def streamStart(self):
-        try:
-            loader = EmbeddingLoader()
-            loader.load(self.args.embedding)
-            loader._loadFeatureTable()
-            self._emb = loader.emb
-        except Exception as e:
-            self.logger.error('Failed while loading embedding: %s', e.message)
-            exit()
+        super(ChuckyScoreTool, self).streamStart()
+        if self.args.feats:
+            self._feats = {}
+            with gzip.open(self.args.feats, 'rb') as f:
+                f.readline()
+                for line in f:
+                    line = line.strip()
+                    dim, feat = line[4:].split(':', 1)
+                    dim = int(dim, 16)
+                    feat = feat.replace("%20", " ").strip()
+                    self._feats[dim] = feat
 
     def process_fields(self, fields):
-        node = fields[0]
-        neighbors = fields[1:]
+        node = int(fields[0])
+        neighbors = map(int, fields[1:])
 
         if len(fields) < 2:
-            self.write_fields([node, '     n/a', 'n/a'])
+            self.write_fields([node, 0, '     n/a', 'n/a'])
             return
 
-        node_index = self._get_index(node)
-        neighbor_indices = map(self._get_index, neighbors)
-        nonzero_neighbor_indices = [n for n in neighbor_indices if n is not None]
-        if len(nonzero_neighbor_indices) > 0:
-            mean = (self._emb.x[nonzero_neighbor_indices].sum(axis=0) / len(neighbors))
+        nonzero_neighbors = [n for n in neighbors if n in self.toc]
+        if len(nonzero_neighbors) > 0:
+            mean = self.feature_matrix(nonzero_neighbors).sum(axis=0) / len(neighbors)
+            mean = np.squeeze(np.asarray(mean))
         else:
-            mean = np.zeros((1, self._emb.x.shape[1]))
-        if node_index is not None:
-            datapoint = self._emb.x[[node_index]]
+            mean = np.zeros(self.number_of_features)
+        if node in self.toc:
+            datapoint = self.feature_matrix([node])
+            datapoint = np.squeeze(datapoint.toarray())
         else:
-            datapoint = np.zeros((1, self._emb.x.shape[1]))
+            datapoint = np.zeros(self.number_of_features)
         deviation = mean - datapoint
         index = deviation.argmax()
-        score = deviation[0, index]
-        feat = self._index_to_feature(index)
-        self.write_fields([node, '{:< 6.5f}'.format(score), feat])
+        score = deviation[index]
+        if score > 0:
+            feat = self.dimension_to_feature(index)
+        else:
+            feat = 'n/a'
 
-    def _get_index(self, node_id):
+        self.write_fields([node, len(neighbors), '{:< 6.5f}'.format(score), feat])
+
+    def get_index(self, node_id):
         try:
-            return self._emb.rTOC[node_id]
+            return super(ChuckyScoreTool, self).get_index(node_id)
         except KeyError:
             if self.args.ignore_missing_datapoints:
+                self.logger.info("Datapoint {} not found".format(node_id))
                 return None
             raise
 
-    def _index_to_feature(self, index):
-        try:
-            return self._emb.rFeatTable[index].replace("%20", " ")
-        except KeyError:
+    def dimension_to_feature(self, index):
+        dim = self.get_dimension(index)
+        if self.args.feats:
+            return self._feats[dim]
+        else:
             return None
 
