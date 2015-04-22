@@ -1,5 +1,5 @@
 from joerntools.shelltool.CmdLineTool import CmdLineTool
-from joern.all import JoernSteps
+from joern.all import JoernSteps, DEFAULT_GRAPHDB_URL
 
 
 class ChuckyJoern(CmdLineTool):
@@ -14,12 +14,19 @@ class ChuckyJoern(CmdLineTool):
 
     def _initializeOptParser(self):
         super(ChuckyJoern, self)._initializeOptParser()
-        self.argParser.add_argument(
+        group = self.argParser.add_argument_group("joern options")
+        group.add_argument(
             '--steps',
             type=str,
             nargs='+',
             default=[],
-            help='additional directorys containing joern steps'
+            help='load additional steps from directory'
+        )
+        group.add_argument(
+            '--uri',
+            type=str,
+            default=DEFAULT_GRAPHDB_URL,
+            help='the uniform resource identifier of the database'
         )
 
     def _init_joern_interface(self):
