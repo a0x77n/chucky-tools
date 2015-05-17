@@ -1,75 +1,194 @@
 Gremlin.defineStep('normalize', [Vertex, Pipe], { symbols ->
 
-	def normalizer = new ASTNormalizer();
-	def handler;
-    
-	handler = new DefaultHandler(true, false);
-	normalizer.addHandler('IncDec', handler);
-	normalizer.addHandler('CastTarget', handler);
+	def node_data_store = [];
+	def handler = [:];
 
-	handler = new DefaultHandler(false, false);
-	normalizer.addHandler('Condition', handler);
+	generic_handler = { node, store=true, prune=false, merge ->
+		children = node.children().toList();
+		if (!children.isEmpty()) {
+			x = children.collect{ handler[it.type](it, !prune) };
+			node_data = merge(x);
+		} else {
+			node_data = "$node.code";
+		}
+		if (store) node_data_store?.add(node_data);
+		return node_data;
+	};
 
-	handler = new IdentifierHandler(false, true, symbols, ['NULL']);
-	normalizer.addHandler('Identifier', handler);
+	identifier_handler = { node, store=true->
+		if (node.code in symbols) {
+			node_data = symbols[node.code]
+			if (store && node.code != 'NULL') node_data_store?.add(node_data);
+		} else  {
+			node_data = node.code
+		}
+		if (store && node.code != 'NULL') node_data_store?.add(node_data);
+		return node_data;
+	}
 
-	handler = new PtrMemberAccessHandler(true, true, symbols);
-	normalizer.addHandler('PtrMemberAccess', handler);
+	primary_expression_handler = { node, store=true ->
+		if (node.code.startsWith(/'/) || node.code.startsWith(/"/)) {
+			node_data = "\$STR";
+		} else {
+			node_data = "\$NUM";
+		}
+		if (store && false) node_data_store?.add(node_data);
+		return node_data;
+	}
 
-	handler = new MemberAccessHandler(true, true, symbols);
-	normalizer.addHandler('MemberAccess', handler);
-    
-	handler = new CalleeHandler(true, true);
-	normalizer.addHandler('Callee', handler);
-    
-	handler = new ArgumentHandler(true, false);
-	normalizer.addHandler('Argument', handler);
+	binary_operation_handler = { node, store=true ->
+		children = node.children().toList();
+		operands = children.collect{ handler[it.type](it) };
+		if (operands[0] == "\$NUM" && operands[1] == "\$NUM")
+			node_data = "\$NUM";
+		else 
+			node_data = "( ${operands[0]} ${node.operator} ${operands[1]} )";
+		if (store) node_data_store?.add(node_data);
+		return node_data;
+	}
 
-	handler = new ArgumentListHandler(true, false);
-	normalizer.addHandler('ArgumentList', handler);
+	comparison_handler = { node, store=true ->
+		merge = { children -> "${children[0]} \$CMP ${children[1]}" };
+		return generic_handler(node, true, merge);
+	}
+	
+	array_indexing_handler = { node, store=true ->
+		merge = { children -> "${children[0]} [ ${children[1]} ]" };
+		return generic_handler(node, true, merge);
+	}
 
-	handler = new CallExpressionHandler(false, false);
-	normalizer.addHandler('CallExpression', handler);
-    
+	call_expression_handler = { node, store=true ->
+		callee = node.children().toList()[0];
+		node_data = callee.code;
+		if (store) node_data_store?.add(node_data);
+		return node_data;
+	}
 
-	handler = new BinaryOperationHandler(false, true);
-	normalizer.addHandler('AndExpression', handler);
-	normalizer.addHandler('BitAndExpression', handler);
-	normalizer.addHandler('InclusiveOrExpression', handler);
-	normalizer.addHandler('ExclusiveOrExpression', handler);
-	normalizer.addHandler('OrExpression', handler);
-	normalizer.addHandler('ShiftExpression', handler);
-	normalizer.addHandler('AndExpression', handler);
+	member_access_handler = { node, store=true ->
+		if (node.code in symbols)
+			node_data = "\$SYM";
+		else {
+			merge = { children -> "${children[0]} . ${children[1]}" };
+			node_data = generic_handler(node, true, true, merge);
+		}
+		if (store) node_data_store?.add(node_data);
+		return node_data;
+	}
 
-	handler = new RelationalOperationHandler(false, true);
-	normalizer.addHandler('RelationalExpression', handler);
-	normalizer.addHandler('EqualityExpression', handler);
-    
-	handler = new ArithmeticOperationHandler(false, true);
-	normalizer.addHandler('AdditiveExpression', handler);
-	normalizer.addHandler('MultiplicativeExpression', handler);
-    
-	handler = new PrimaryExpressionHandler(false, false);
-	normalizer.addHandler('PrimaryExpression', handler);
-    
-	handler = new CastExpressionHandler(false, true);
-	normalizer.addHandler('CastExpression', handler);
-    
-	handler = new AssignmentExpressionHandler(false, true);
-	normalizer.addHandler('AssignmentExpr', handler);
-    
-	handler = new ArrayIndexingHandler(false, true);
-	normalizer.addHandler('ArrayIndexing', handler);
-    
-	handler = new ConditionalExpressionHandler(false, true);
-	normalizer.addHandler('ConditionalExpression', handler);
+	ptr_member_access_handler = { node, store=true ->
+		if (node.code in symbols)
+			node_data = "\$SYM";
+		else {
+			merge = { children -> "${children[0]} -> ${children[1]}" };
+			node_data = generic_handler(node, true, true, merge);
+		}
+		if (store) node_data_store?.add(node_data);
+		return node_data;
+	}
 
-	handler = new UnaryOperationHandler(false, true, symbols);
-	normalizer.addHandler('UnaryOp', handler);
+	cast_target_handler = { node, store=true ->
+		return generic_handler(node, store, false, null);
+	}
 
-	handler = new UnaryOperatorHandler(false, false);
-	normalizer.addHandler('UnaryOperator', handler);
+	cast_expression_handler = { node, store=true ->
+		merge = { children -> "(${children[0]}) ${children[1]}" };
+		return generic_handler(node, true, false, merge);
+	}
 
-	_().transform{ normalizer.normalizeTree(it) }.scatter()
+	condition_handler = { node, store=true ->
+		merge = { children -> "${children[0]}" };
+		return generic_handler(node, false, false, merge);
+	}
+
+	conditional_expression_handler = { node, store=true ->
+		merge = { children -> "${children[0]} ? ${children[1]} : ${children[2]}" };
+		return generic_handler(node, true, false, merge);
+	}
+
+	unary_operator_handler = { node, store=true ->
+		return generic_handler(node, store, false, null);
+	}
+
+	unary_operation_handler = { node, store=true ->
+		merge = { children -> if (children[0] != "!") "${children[0]} ${children[1]}" else "${children[1]}" }
+		return generic_handler(node, store, true, merge);
+	}
+
+	unary_expression_handler = { node, store=true ->
+		merge = { children -> "${children[0]} ${children[1]}" }
+		return generic_handler(node, store, true, merge);
+	}
+
+	assignment_expression_handler = { node, store=true ->
+		merge = { children -> "${children[0]} = ${children[1]}" };
+		return generic_handler(node, store, false, merge);
+	}
+
+	sizeof_expression_handler = { node, store=true ->
+		merge = { children -> "${children[0]} ( ${children[1]} )" };
+		return generic_handler(node, store, false, merge);
+	}
+
+	sizeof_handler = { node, store=true ->
+		return generic_handler(node, store, false, null);
+	}
+
+	sizeof_operand_handler = { node, store=true ->
+		merge = { children -> "${children[0]}" };
+		return generic_handler(node, false, false, merge);
+	}
+
+	incdec_operation_handler = { node, store=true ->
+		merge = { children -> "${children[0]} ${children[1]}" };
+		return generic_handler(node, true, false, merge);
+	}
+
+	incdec_handler = { node, store=true ->
+		return generic_handler(node, true, false, null);
+	}
+
+	handler['Condition'] = condition_handler;
+		
+	handler['AdditiveExpression'] = binary_operation_handler;
+	handler['MultiplicativeExpression'] = binary_operation_handler;
+
+	handler['InclusiveOrExpression'] = binary_operation_handler;
+	handler['ExclusiveOrExpression'] = binary_operation_handler;
+	handler['OrExpression'] = binary_operation_handler;
+	handler['AndExpression'] = binary_operation_handler;
+	handler['BitAndExpression'] = binary_operation_handler;
+	handler['ShiftExpression'] = binary_operation_handler;
+	handler['AssignmentExpr'] = binary_operation_handler;
+
+	handler['EqualityExpression'] = comparison_handler;
+	handler['RelationalExpression'] = comparison_handler;
+	handler['ConditionalExpression'] = conditional_expression_handler;
+
+	handler['Identifier'] = identifier_handler;
+	handler['MemberAccess'] = member_access_handler;
+	handler['PtrMemberAccess'] = ptr_member_access_handler;
+
+	handler['ArrayIndexing'] = array_indexing_handler;
+
+	handler['CallExpression'] = call_expression_handler;
+
+	handler['CastExpression'] = cast_expression_handler;
+	handler['CastTarget'] = cast_target_handler;
+
+	handler['PrimaryExpression'] = primary_expression_handler;
+
+	handler['IncDec'] = incdec_handler;
+	handler['IncDecOp'] = incdec_operation_handler;
+
+	handler['Sizeof'] = sizeof_handler;
+	handler['SizeofExpr'] = sizeof_expression_handler;
+	handler['SizeofOperand'] = sizeof_operand_handler;
+
+	handler['UnaryExpression'] = unary_expression_handler;
+
+	handler['UnaryOp'] = unary_operation_handler;
+	handler['UnaryOperator'] = unary_operator_handler;
+
+	_().sideEffect{ handler[it.type](it) }.transform{ node_data_store }.scatter()
 
 });
