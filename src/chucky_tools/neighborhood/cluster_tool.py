@@ -12,6 +12,7 @@ DESCRIPTION = """Cluster tool. Reads lists of node IDs from the provided input a
 each representing a cluster based on the provided features. With compatibility mode enabled only the lists containing
 the first list entries are returned."""
 
+
 class ClusterTool(NeighborhoodTool):
     def __init__(self):
         super(ClusterTool, self).__init__(DESCRIPTION)
