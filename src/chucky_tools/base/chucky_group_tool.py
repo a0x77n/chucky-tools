@@ -22,10 +22,11 @@ class GroupTool(FieldsTool):
             self.process_group(key, data)
 
     def process_fields(self, fields):
-        key = field_select(fields, self._group_by_columns)
-        if key not in self._groups:
-            self._groups[key] = []
-        self._groups[key].append(fields)
+        if len(fields) > len(self._group_by_columns):
+            key = field_select(fields, self._group_by_columns)
+            if key not in self._groups:
+                self._groups[key] = []
+            self._groups[key].append(fields)
 
     def process_group(self, group_key, group_data):
         pass
