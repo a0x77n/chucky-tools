@@ -30,9 +30,10 @@ class ROCCurve(GroupTool):
 
     def streamEnd(self):
         super(ROCCurve, self).streamEnd()
-        for threshold in np.linspace(1, 0, self.args.number_of_thresholds):
-            tp, fp = self._classify(threshold)
-            self.write_fields([tp / len(self._without_check), fp / len(self._with_check)])
+        if self._with_check and self._without_check:
+            for threshold in np.linspace(1, 0, self.args.number_of_thresholds):
+                tp, fp = self._classify(threshold)
+                self.write_fields([tp / len(self._without_check), fp / len(self._with_check)])
 
     def _classify(self, threshold):
         fp, tp = 0, 0
