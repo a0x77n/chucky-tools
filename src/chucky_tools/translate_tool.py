@@ -1,6 +1,7 @@
 from chucky_tools.base import BatchTool
 from chucky_tools.base import ChuckyJoern
-from chucky_tools.base import field_select, attribute_escape
+from chucky_tools.argparse_types import property_type
+from chucky_tools.base import field_select
 
 ARGPARSE_DESCRIPTION = """Simple translation tool. Replace node/edge
 ids by an attribute."""
@@ -14,8 +15,8 @@ class TranslateTool(BatchTool, ChuckyJoern):
     def _initializeOptParser(self):
         super(TranslateTool, self)._initializeOptParser()
         self.argParser.add_argument(
-            'attribute',
-            type=str,
+            'property',
+            type=property_type,
             help='the attribute'
         )
         self.argParser.add_argument(
@@ -50,9 +51,9 @@ class TranslateTool(BatchTool, ChuckyJoern):
             nodes.extend(selection)
 
         nodes = list(set(nodes))
-        query = self._query.format(nodes, attribute_escape(self.args.attribute))
-        attributes = self.run_query(query)
-        translation = dict(zip(nodes, attributes))
+        query = self._query.format(nodes, self.args.property)
+        properties = self.run_query(query)
+        translation = dict(zip(nodes, properties))
 
         for line in batch:
             for column in xrange(len(line)):

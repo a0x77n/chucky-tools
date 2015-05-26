@@ -1,10 +1,11 @@
 from chucky_tools.base import ChuckyJoern
 from chucky_tools.base import BatchTool, ChuckyLogger
+from chucky_tools.argparse_types import property_type
 
 ARGPARSE_DESCRIPTION = """Simple traversal tool. Perform a traversal
 starting at a list of start nodes."""
 
-QUERY = 'idListToNodes({}).transform{{ it.{}.id.toList() }}'
+QUERY = 'idListToNodes({}).transform{{ it.{}.{}.toList() }}'
 
 
 class TraversalTool(BatchTool, ChuckyJoern, ChuckyLogger):
@@ -18,6 +19,12 @@ class TraversalTool(BatchTool, ChuckyJoern, ChuckyLogger):
             'traversal',
             type=str,
             help='the traversal'
+        )
+        self.argParser.add_argument(
+            '-p', '--property',
+            type=property_type,
+            default='id',
+            help=''
         )
         self.argParser.add_argument(
             '-c', '--column',
@@ -41,7 +48,7 @@ class TraversalTool(BatchTool, ChuckyJoern, ChuckyLogger):
 
     def process_batch(self, batch):
         start_nodes = [int(x[self.args.column]) for x in batch]
-        query = QUERY.format(start_nodes, self.traversal)
+        query = QUERY.format(start_nodes, self.traversal, self.args.property)
         result = self.run_query(query)
         for line, nodes in zip(batch, result):
             if not nodes:

@@ -17,12 +17,3 @@ def field_select_complement(fields, indices):
     """
     complement_indices = [i for i in range(len(fields)) if i not in indices]
     return field_select(fields, complement_indices)
-
-
-def attribute_escape(attriute_string):
-    """
-    Strips all non alpha numeric characters from string
-    :param attriute_string: the raw string
-    :return: the escaped string
-    """
-    return filter(str.isalnum, attriute_string)

@@ -10,5 +10,4 @@ from .chucky_grouped_batch_tool import GroupedBatchTool
 from .chucky_embedding_loader import ChuckyEmbeddingLoader
 from .chucky_dimension_reduction_tool import DimensionReductionTool
 
-from .misc import field_select, field_select_complement, attribute_escape
-
+from .misc import field_select, field_select_complement
