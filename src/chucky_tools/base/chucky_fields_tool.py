@@ -2,7 +2,6 @@ import os
 
 from joerntools.shelltool.PipeTool import PipeTool
 
-
 ARGPARSE_DELIMITER = '\t'
 
 
@@ -19,9 +18,19 @@ class FieldsTool(PipeTool):
             default=ARGPARSE_DELIMITER,
             help="""the input and output field delimiter"""
         )
+        self.argParser.add_argument(
+            '--echo-comments',
+            action='store_true',
+            help="""echo comments from input to output"""
+        )
 
     def processLine(self, line):
-        self.process_fields(line.split(self.args.delimiter))
+        if line.startswith('#'):
+            if self.args.echo_comments:
+                self.output(line)
+                self.output(os.linesep)
+        else:
+            self.process_fields(line.split(self.args.delimiter))
 
     def process_fields(self, fields):
         pass
