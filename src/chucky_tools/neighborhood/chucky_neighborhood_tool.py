@@ -44,6 +44,7 @@ class NeighborhoodTool(FieldsTool, DimensionReductionTool, ChuckyEmbeddingLoader
             self.argParser.error("option '--local-svd' requires option '--number-of-components' to be set")
 
     def streamStart(self):
+        super(NeighborhoodTool, self).streamStart()
         # Load embedding
         try:
             self._load_embedding()
@@ -53,6 +54,7 @@ class NeighborhoodTool(FieldsTool, DimensionReductionTool, ChuckyEmbeddingLoader
         # Dimension reduction
         if not self.args.local_svd and self.args.number_of_components:
             self._x = self.perform_svd(self._x)
+
         self.__map = {}
 
     def write_neighborhood(self, target, neighborhood):
