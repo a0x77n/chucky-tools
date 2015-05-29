@@ -4,14 +4,13 @@ from argparse import FileType
 from sklearn.datasets import dump_svmlight_file
 
 from chucky_tools.base import ChuckyEmbeddingLoader
-from chucky_tools.base import ChuckyLogger
 from chucky_tools.base import DimensionReductionTool
 
 
 DESCRIPTION = "Dimension reduction tool."
 
 
-class EmbeddingReducer(ChuckyEmbeddingLoader, DimensionReductionTool, ChuckyLogger):
+class EmbeddingReducer(ChuckyEmbeddingLoader, DimensionReductionTool):
     def __init__(self):
         super(EmbeddingReducer, self).__init__(DESCRIPTION)
 
