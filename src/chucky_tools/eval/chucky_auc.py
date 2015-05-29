@@ -17,9 +17,9 @@ class AUC(FieldsTool):
         self._fp = []
 
     def process_fields(self, line):
-        tp, fp = line
-        self._tp.append(float(tp))
+        fp, tp = line
         self._fp.append(float(fp))
+        self._tp.append(float(tp))
 
     def streamEnd(self):
         auc = np.trapz(self._tp, x=self._fp)

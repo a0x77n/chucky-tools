@@ -33,7 +33,7 @@ class ROCCurve(GroupTool):
         if self._with_check and self._without_check:
             for threshold in np.linspace(1, 0, self.args.number_of_thresholds):
                 tp, fp = self._classify(threshold)
-                self.write_fields([tp / len(self._without_check), fp / len(self._with_check)])
+                self.write_fields([fp / len(self._with_check), tp / len(self._without_check)])
 
     def _classify(self, threshold):
         fp, tp = 0, 0
