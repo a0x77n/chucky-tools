@@ -26,7 +26,7 @@ setup(
             'chucky-traverse = chucky_tools.traversal_tool:TraversalTool.main',
             'chucky-translate = chucky_tools.translate_tool:TranslateTool.main',
             'chucky-rotate = chucky_tools.chucky_rotate_tool:RotateTool.main',
-            'chucky-reduce = chucky_tools.neighborhood.embedding_reducer:EmbeddingReducer.main',
+            'chucky-reduce = chucky_tools.embedding_reducer:EmbeddingReducer.main',
             'chucky-roc = chucky_tools.eval.chucky_roc_curve:ROCCurve.main',
             'chucky-auc = chucky_tools.eval.chucky_auc:AUC.main',
         ]
