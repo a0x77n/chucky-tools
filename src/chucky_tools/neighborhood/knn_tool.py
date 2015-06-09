@@ -22,6 +22,7 @@ class KNNTool(NeighborhoodTool):
         )
 
     def process_fields(self, line):
+	super(KNNTool, self).process_fields(line)
         nodes = map(int, line)
         self.neighborhood(nodes[0], nodes[1:])
 

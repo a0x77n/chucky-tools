@@ -57,6 +57,11 @@ class NeighborhoodTool(FieldsTool, DimensionReductionTool, ChuckyEmbeddingLoader
 
         self.__map = {}
 
+    def process_fields(self, line):
+        super(NeighborhoodTool, self).process_fields(line)
+        if not self.args.disable_map_to_functions:
+            self._create_mapping(line)
+
     def write_neighborhood(self, target, neighborhood):
         self.write_fields([target] + neighborhood)
 
@@ -83,6 +88,14 @@ class NeighborhoodTool(FieldsTool, DimensionReductionTool, ChuckyEmbeddingLoader
             query = 'g.v({}).functionId'.format(ast_node)
             self.__map[ast_node] = int(self.run_query(query))
         return self.__map[ast_node]
+
+    def _create_mapping(self, ast_node_list):
+        ast_node_list = map(int, ast_node_list)
+        ast_node_list = [x for x in ast_node_list if x not in self.__map]
+        query = 'idListToNodes({}).functionId'.format(ast_node_list)
+        function_ids = map(int, self.run_query(query))
+        for ast_node, function_id in zip(ast_node_list, function_ids):
+            self.__map[ast_node] = function_id
 
     def get_index(self, node_id):
         if not self.args.disable_map_to_functions:

@@ -67,6 +67,7 @@ class ClusterTool(NeighborhoodTool):
             self._global_cluster = dict(zip(datapoints, labels))
 
     def process_fields(self, line):
+        super(ClusterTool, self).process_fields(line)
         nodes = map(int, line)
         self.neighborhood(nodes[0], nodes[1:])
 
