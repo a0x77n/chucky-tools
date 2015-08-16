@@ -18,7 +18,6 @@ Gremlin.defineStep('normalize', [Vertex, Pipe], { symbols ->
 	identifier_handler = { node, store=true->
 		if (node.code in symbols) {
 			node_data = symbols[node.code]
-			if (store && node.code != 'NULL') node_data_store?.add(node_data);
 		} else  {
 			node_data = node.code
 		}
@@ -27,7 +26,7 @@ Gremlin.defineStep('normalize', [Vertex, Pipe], { symbols ->
 	}
 
 	primary_expression_handler = { node, store=true ->
-		if (node.code.startsWith(/'/) || node.code.startsWith(/"/)) {
+		if (node.code.startsWith(/"/)) {
 			node_data = "\$STR";
 		} else {
 			node_data = "\$NUM";
@@ -48,41 +47,63 @@ Gremlin.defineStep('normalize', [Vertex, Pipe], { symbols ->
 	}
 
 	comparison_handler = { node, store=true ->
-		merge = { children -> "${children[0]} \$CMP ${children[1]}" };
+		merge = { children -> 
+			if (children[0] == 'NULL')
+				"${children[1]}"
+			else if (children[1] == 'NULL')
+				"${children[0]}"
+			else
+				"${children[0]} \$CMP ${children[1]}"
+		};
 		return generic_handler(node, true, merge);
 	}
 	
 	array_indexing_handler = { node, store=true ->
 		merge = { children -> "${children[0]} [ ${children[1]} ]" };
-		return generic_handler(node, true, merge);
+		return generic_handler(node, store, true, merge);
 	}
 
 	call_expression_handler = { node, store=true ->
-		callee = node.children().toList()[0];
-		node_data = callee.code;
-		if (store) node_data_store?.add(node_data);
-		return node_data;
+		merge = { children -> "${children[0]} ( ${children[1]} )" };
+		return generic_handler(node, store, false, merge);
+	}
+
+	callee_handler = { node, store=true ->
+		merge = { children -> "${children[0]}" };
+		return generic_handler(node, store, true, merge);
+	}
+
+	argument_list_handler = { node, store=true ->
+		merge = { children -> children.join(', ') };
+		return generic_handler(node, false, true, merge);
+	}
+
+	argument_handler = { node, store=true ->
+		merge = { children -> "${children[0]}" };
+		return generic_handler(node, store, true, merge);
 	}
 
 	member_access_handler = { node, store=true ->
-		if (node.code in symbols)
+		if (node.code in symbols) {
 			node_data = "\$SYM";
+			if (store) node_data_store?.add(node_data);
+		}
 		else {
 			merge = { children -> "${children[0]} . ${children[1]}" };
 			node_data = generic_handler(node, true, true, merge);
 		}
-		if (store) node_data_store?.add(node_data);
 		return node_data;
 	}
 
 	ptr_member_access_handler = { node, store=true ->
-		if (node.code in symbols)
+		if (node.code in symbols) {
 			node_data = "\$SYM";
+			if (store) node_data_store?.add(node_data);
+		}
 		else {
 			merge = { children -> "${children[0]} -> ${children[1]}" };
 			node_data = generic_handler(node, true, true, merge);
 		}
-		if (store) node_data_store?.add(node_data);
 		return node_data;
 	}
 
@@ -140,11 +161,11 @@ Gremlin.defineStep('normalize', [Vertex, Pipe], { symbols ->
 
 	incdec_operation_handler = { node, store=true ->
 		merge = { children -> "${children[0]} ${children[1]}" };
-		return generic_handler(node, true, false, merge);
+		return generic_handler(node, store, true, merge);
 	}
 
 	incdec_handler = { node, store=true ->
-		return generic_handler(node, true, false, null);
+		return generic_handler(node, false, false, null);
 	}
 
 	handler['Condition'] = condition_handler;
@@ -171,6 +192,9 @@ Gremlin.defineStep('normalize', [Vertex, Pipe], { symbols ->
 	handler['ArrayIndexing'] = array_indexing_handler;
 
 	handler['CallExpression'] = call_expression_handler;
+	handler['Callee'] = callee_handler;
+	handler['ArgumentList'] = argument_list_handler;
+	handler['Argument'] = argument_handler;
 
 	handler['CastExpression'] = cast_expression_handler;
 	handler['CastTarget'] = cast_target_handler;
